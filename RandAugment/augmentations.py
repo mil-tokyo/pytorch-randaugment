@@ -129,8 +129,8 @@ def CutoutAbs(img, v):  # [0, 60] => percentage: [0, 0.2]
     if v < 0:
         return img
     w, h = img.size
-    x0 = np.random.uniform(w)
-    y0 = np.random.uniform(h)
+    x0 = random.uniform(0,w)
+    y0 = random.uniform(0,h)
 
     x0 = int(max(0, x0 - v / 2.))
     y0 = int(max(0, y0 - v / 2.))
@@ -147,7 +147,7 @@ def CutoutAbs(img, v):  # [0, 60] => percentage: [0, 0.2]
 
 def SamplePairing(imgs):  # [0, 0.4]
     def f(img1, v):
-        i = np.random.choice(len(imgs))
+        i = random.randrange(len(imgs))
         img2 = PIL.Image.fromarray(imgs[i])
         return PIL.Image.blend(img1, img2, v)
 
@@ -234,8 +234,8 @@ class CutoutDefault(object):
     def __call__(self, img):
         h, w = img.size(1), img.size(2)
         mask = np.ones((h, w), np.float32)
-        y = np.random.randint(h)
-        x = np.random.randint(w)
+        y = random.randrange(h)
+        x = random.randrange(w)
 
         y1 = np.clip(y - self.length // 2, 0, h)
         y2 = np.clip(y + self.length // 2, 0, h)
