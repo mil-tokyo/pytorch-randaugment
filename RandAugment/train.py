@@ -47,8 +47,8 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
 
         if optimizer:
             loss.backward()
-            if C.get()['optimizer'].get('clip', 5) > 0:
-                nn.utils.clip_grad_norm_(model.parameters(), C.get()['optimizer'].get('clip', 5))
+            #if C.get()['optimizer'].get('clip', 5) > 0:
+            #    nn.utils.clip_grad_norm_(model.parameters(), C.get()['optimizer'].get('clip', 5))
             optimizer.step()
 
         top1, top5 = accuracy(preds, label, (1, 5))

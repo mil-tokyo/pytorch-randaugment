@@ -27,16 +27,19 @@ _IMAGENET_PCA = {
     ]
 }
 _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+fcolor = (125,123,114)
 
 
 def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
+    place_to_insert = 0
     if 'cifar' in dataset or 'svhn' in dataset:
         transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
+            transforms.RandomCrop(32, padding=4,fill = fcolor),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
         ])
+        place_to_insert = 2
         transform_test = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
@@ -54,6 +57,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
             Lighting(0.1, _IMAGENET_PCA['eigval'], _IMAGENET_PCA['eigvec']),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
+        place_to_insert = 3
 
         transform_test = transforms.Compose([
             transforms.Resize(256, interpolation=Image.BICUBIC),
@@ -66,7 +70,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
 
     logger.debug('augmentation: %s' % C.get()['aug'])
     if C.get()['aug'] == 'randaugment':
-        transform_train.transforms.insert(0, RandAugment(C.get()['randaug']['N'], C.get()['randaug']['M']))
+        transform_train.transforms.insert(place_to_insert, RandAugment(C.get()['randaug']['N'], C.get()['randaug']['M']))
     elif C.get()['aug'] in ['default', 'inception', 'inception320']:
         pass
     else:
