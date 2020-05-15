@@ -28,11 +28,11 @@ _IMAGENET_PCA = {
 }
 _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
 
-
+fillcolor = (128,128,128)
 def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
     if 'cifar' in dataset or 'svhn' in dataset:
         transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
+            transforms.RandomCrop(32, padding=4,fill = fillcolor),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
@@ -43,7 +43,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
         ])
     elif 'imagenet' in dataset:
         transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(224, scale=(0.08, 1.0), interpolation=Image.BICUBIC),
+            transforms.RandomResizedCrop(224, scale=(0.08, 1.0), interpolation=Image.BICUBIC, ),
             transforms.RandomHorizontalFlip(),
             transforms.ColorJitter(
                 brightness=0.4,
@@ -66,7 +66,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
 
     logger.debug('augmentation: %s' % C.get()['aug'])
     if C.get()['aug'] == 'randaugment':
-        transform_train.transforms.insert(0, RandAugment(C.get()['randaug']['N'], C.get()['randaug']['M']))
+        transform_train.transforms.insert(0, RandAugment(C.get()['randaug']['N'], C.get()['randaug']['M'],fillcolor = fillcolor))
     elif C.get()['aug'] in ['default', 'inception', 'inception320']:
         pass
     else:

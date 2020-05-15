@@ -6,57 +6,57 @@ import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
 import numpy as np
 import torch
 from PIL import Image
+import inspect
 
-
-def ShearX(img, v):  # [-0.3, 0.3]
+def ShearX(img, v, fillcolor):  # [-0.3, 0.3]
     assert -0.3 <= v <= 0.3
     if random.random() > 0.5:
         v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, v, 0, 0, 1, 0))
+    return img.transform(img.size, PIL.Image.AFFINE, (1, v, 0, 0, 1, 0),fillcolor = fillcolor)
 
 
-def ShearY(img, v):  # [-0.3, 0.3]
+def ShearY(img, v, fillcolor):  # [-0.3, 0.3]
     assert -0.3 <= v <= 0.3
     if random.random() > 0.5:
         v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, v, 1, 0))
+    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, v, 1, 0), fillcolor = fillcolor)
 
 
-def TranslateX(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
+def TranslateX(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
     assert -0.45 <= v <= 0.45
     if random.random() > 0.5:
         v = -v
     v = v * img.size[0]
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0))
+    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0), fillcolor = fillcolor)
 
 
-def TranslateXabs(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
+def TranslateXabs(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
     assert 0 <= v
     if random.random() > 0.5:
         v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0))
+    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0), fillcolor = fillcolor)
 
 
-def TranslateY(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
+def TranslateY(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
     assert -0.45 <= v <= 0.45
     if random.random() > 0.5:
         v = -v
     v = v * img.size[1]
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v))
+    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v), fillcolor = fillcolor)
 
 
-def TranslateYabs(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
+def TranslateYabs(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
     assert 0 <= v
     if random.random() > 0.5:
         v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v))
+    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v), fillcolor = fillcolor)
 
 
-def Rotate(img, v):  # [-30, 30]
+def Rotate(img, v, fillcolor):  # [-30, 30]
     assert -30 <= v <= 30
     if random.random() > 0.5:
         v = -v
-    return img.rotate(v)
+    return img.rotate(v, fillcolor = fillcolor)
 
 
 def AutoContrast(img, _):
@@ -115,16 +115,16 @@ def Sharpness(img, v):  # [0.1,1.9]
     return PIL.ImageEnhance.Sharpness(img).enhance(v)
 
 
-def Cutout(img, v):  # [0, 60] => percentage: [0, 0.2]
+def Cutout(img, v, fillcolor):  # [0, 60] => percentage: [0, 0.2]
     assert 0.0 <= v <= 0.2
     if v <= 0.:
         return img
 
     v = v * img.size[0]
-    return CutoutAbs(img, v)
+    return CutoutAbs(img, v,fillcolor = fillcolor)
 
 
-def CutoutAbs(img, v):  # [0, 60] => percentage: [0, 0.2]
+def CutoutAbs(img, v, fillcolor):  # [0, 60] => percentage: [0, 0.2]
     # assert 0 <= v <= 20
     if v < 0:
         return img
@@ -138,10 +138,8 @@ def CutoutAbs(img, v):  # [0, 60] => percentage: [0, 0.2]
     y1 = min(h, y0 + v)
 
     xy = (x0, y0, x1, y1)
-    color = (125, 123, 114)
-    # color = (0, 0, 0)
     img = img.copy()
-    PIL.ImageDraw.Draw(img).rectangle(xy, color)
+    PIL.ImageDraw.Draw(img).rectangle(xy, fillcolor)
     return img
 
 
@@ -250,15 +248,20 @@ class CutoutDefault(object):
 
 
 class RandAugment:
-    def __init__(self, n, m):
+    def __init__(self, n, m, fillcolor = (0,0,0)):
         self.n = n
         self.m = m      # [0, 30]
+        self.fillcolor = fillcolor
         self.augment_list = augment_list()
 
     def __call__(self, img):
         ops = random.choices(self.augment_list, k=self.n)
         for op, minval, maxval in ops:
             val = (float(self.m) / 30) * float(maxval - minval) + minval
-            img = op(img, val)
+            if 'fillcolor' in inspect.getfullargspec(op)[0]:
+              assert 'fillcolor' == inspect.getfullargspec(op)[0][-1]
+              img = op(img, val, self.fillcolor)
+            else:
+              img = op(img, val)
 
         return img
