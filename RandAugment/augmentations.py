@@ -9,21 +9,18 @@ from PIL import Image
 import inspect
 
 def ShearX(img, v, fillcolor):  # [-0.3, 0.3]
-    assert -0.3 <= v <= 0.3
     if random.random() > 0.5:
         v = -v
     return img.transform(img.size, PIL.Image.AFFINE, (1, v, 0, 0, 1, 0),fillcolor = fillcolor)
 
 
 def ShearY(img, v, fillcolor):  # [-0.3, 0.3]
-    assert -0.3 <= v <= 0.3
     if random.random() > 0.5:
         v = -v
     return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, v, 1, 0), fillcolor = fillcolor)
 
 
 def TranslateX(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert -0.45 <= v <= 0.45
     if random.random() > 0.5:
         v = -v
     v = v * img.size[0]
@@ -31,14 +28,12 @@ def TranslateX(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
 
 
 def TranslateXabs(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert 0 <= v
     if random.random() > 0.5:
         v = -v
     return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0), fillcolor = fillcolor)
 
 
 def TranslateY(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert -0.45 <= v <= 0.45
     if random.random() > 0.5:
         v = -v
     v = v * img.size[1]
@@ -46,14 +41,12 @@ def TranslateY(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
 
 
 def TranslateYabs(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert 0 <= v
     if random.random() > 0.5:
         v = -v
     return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v), fillcolor = fillcolor)
 
 
 def Rotate(img, v, fillcolor):  # [-30, 30]
-    assert -30 <= v <= 30
     if random.random() > 0.5:
         v = -v
     return img.rotate(v, fillcolor = fillcolor)
@@ -76,7 +69,7 @@ def Flip(img, _):  # not from the paper
 
 
 def Solarize(img, v):  # [0, 256]
-    assert 0 <= v <= 256
+    v = np.clip(v,0,255)
     return PIL.ImageOps.solarize(img, 256-v)
 
 
@@ -96,27 +89,22 @@ def Posterize(img, v):  # [0, 8]
 
 
 def Contrast(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
     return PIL.ImageEnhance.Contrast(img).enhance(v)
 
 
 def Color(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
     return PIL.ImageEnhance.Color(img).enhance(v)
 
 
 def Brightness(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
     return PIL.ImageEnhance.Brightness(img).enhance(v)
 
 
 def Sharpness(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
     return PIL.ImageEnhance.Sharpness(img).enhance(v)
 
 
 def Cutout(img, v, fillcolor):  # [0, 60] => percentage: [0, 0.2]
-    assert 0.0 <= v <= 0.2
     if v <= 0.:
         return img
 
@@ -244,8 +232,7 @@ class CutoutDefault(object):
         mask[y1: y2, x1: x2] = 0.
         mask = torch.from_numpy(mask)
         mask = mask.expand_as(img)
-        img *= mask
-        return img
+        return img*mask
 
 
 class RandAugment:
@@ -258,7 +245,7 @@ class RandAugment:
     def __call__(self, img):
         ops = random.choices(self.augment_list, k=self.n)
         for op, minval, maxval in ops:
-            val = (float(self.m) / 30) * float(maxval - minval) + minval
+            val = (float(self.m) / 10) * float(maxval - minval) + minval
             if 'fillcolor' in inspect.getfullargspec(op)[0]:
               assert 'fillcolor' == inspect.getfullargspec(op)[0][-1]
               img = op(img, val, self.fillcolor)
