@@ -9,12 +9,12 @@ randaug:
 cutout: 0
 batch: 512
 epoch: 180  # 270
-lr: 0.1
+lr: 0.01
 lr_schedule:
   type: 'resnet'
   warmup:
-    multiplier: 2
-    epoch: 3
+    multiplier: 20
+    epoch: 5
 optimizer:
   type: sgd
   nesterov: True

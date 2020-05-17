@@ -9,11 +9,11 @@ randaug:
 cutout: 16
 batch: 512
 epoch: 1800
-lr: 0.01
+lr: 0.001
 lr_schedule:
   type: 'cosine'
   warmup:
-    multiplier: 4
+    multiplier: 40
     epoch: 5
 optimizer:
   type: sgd
