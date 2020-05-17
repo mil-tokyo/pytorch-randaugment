@@ -69,8 +69,7 @@ def Flip(img, _):  # not from the paper
 
 
 def Solarize(img, v):  # [0, 256]
-    v = np.clip(v,0,255)
-    return PIL.ImageOps.solarize(img, 256-v)
+    return PIL.ImageOps.solarize(img, v)
 
 
 def SolarizeAdd(img, addition=0, threshold=128):
@@ -83,8 +82,7 @@ def SolarizeAdd(img, addition=0, threshold=128):
 
 
 def Posterize(img, v):  # [0, 8]
-    v = int(8-v)
-    v = max(1, v)
+    v = int(v)
     return PIL.ImageOps.posterize(img, v)
 
 
@@ -158,7 +156,7 @@ def augment_list(is_smallimage):  # 16 oeprations and their ranges
             #(Invert, 0, 1),  # 6
             (Equalize, 0, 1),  # 7
             (Solarize, 0, 256),  # 8
-            (Posterize, 4, 8),  # 9
+            (Posterize, 0, 4),  # 9
             (Contrast, 0.1, 1.9),  # 10
             (Color, 0.1, 1.9),  # 11
             (Brightness, 0.1, 1.9),  # 12
