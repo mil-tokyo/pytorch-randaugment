@@ -53,9 +53,9 @@ class BasicBlock(nn.Module):
             padding = torch.autograd.Variable(
                 torch.cuda.FloatTensor(batch_size, residual_channel - shortcut_channel, featuremap_size[0],
                                        featuremap_size[1]).fill_(0))
-            out += torch.cat((shortcut, padding), 1)
+            out = out + torch.cat((shortcut, padding), 1)
         else:
-            out += shortcut
+            out = out + shortcut
 
         return out
 
@@ -110,9 +110,9 @@ class Bottleneck(nn.Module):
             padding = torch.autograd.Variable(
                 torch.cuda.FloatTensor(batch_size, residual_channel - shortcut_channel, featuremap_size[0],
                                        featuremap_size[1]).fill_(0))
-            out += torch.cat((shortcut, padding), 1)
+            out = out +torch.cat((shortcut, padding), 1)
         else:
-            out += shortcut
+            out = out +shortcut
 
         return out
 
