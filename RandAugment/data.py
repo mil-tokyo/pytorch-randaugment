@@ -15,7 +15,7 @@ from RandAugment.common import get_logger
 from RandAugment.imagenet import ImageNet
 
 from RandAugment.augmentations import Lighting, RandAugment
-
+from CustomImagenet import *
 logger = get_logger('RandAugment')
 logger.setLevel(logging.INFO)
 _IMAGENET_PCA = {
@@ -83,11 +83,11 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
         total_trainset = ConcatDataset([trainset, extraset])
         testset = torchvision.datasets.SVHN(root=dataroot, split='test', download=True, transform=transform_test)
     elif dataset == 'imagenet':
-        total_trainset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), transform=transform_train)
-        testset = ImageNet(root=os.path.join(dataroot, 'imagenet-pytorch'), split='val', transform=transform_test)
+        total_trainset = CustomImagenet(root=dataroot,split = 'train', transform=transform_train)
+        testset = CustomImagenet(root=dataroot, split='val', transform=transform_test)
 
         # compatibility
-        total_trainset.targets = [lb for _, lb in total_trainset.samples]
+        #total_trainset.targets = [lb for _, lb in total_trainset.samples]
     else:
         raise ValueError('invalid dataset name=%s' % dataset)
 
@@ -104,10 +104,10 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
         valid_sampler = SubsetSampler([])
 
     trainloader = torch.utils.data.DataLoader(
-        total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, num_workers=32, pin_memory=True,
+        total_trainset, batch_size=batch, shuffle=True if train_sampler is None else False, num_workers=64, pin_memory=True,
         sampler=train_sampler, drop_last=True)
     validloader = torch.utils.data.DataLoader(
-        total_trainset, batch_size=batch, shuffle=False, num_workers=16, pin_memory=True,
+        total_trainset, batch_size=batch, shuffle=False, num_workers=64, pin_memory=True,
         sampler=valid_sampler, drop_last=False)
 
     testloader = torch.utils.data.DataLoader(
