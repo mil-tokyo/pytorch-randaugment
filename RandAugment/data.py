@@ -41,7 +41,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
             transforms.ToTensor(),
             transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
         ])
-        place_to_insert = 2
+        place_to_insert = 3
     elif 'imagenet' in dataset:
         transform_train = transforms.Compose([
             transforms.RandomResizedCrop(224, scale=(0.08, 1.0), interpolation=Image.BICUBIC, ),
@@ -56,7 +56,7 @@ def get_dataloaders(dataset, batch, dataroot, split=0.15, split_idx=0):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
-        place_to_insert = 2
+        place_to_insert = 3
     else:
         raise ValueError('dataset=%s' % dataset)
 

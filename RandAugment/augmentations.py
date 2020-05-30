@@ -7,49 +7,29 @@ import numpy as np
 import torch
 from PIL import Image
 import inspect
+from pixelchangenet import *
+import torchvision.transforms as transforms
+def ShearX(value):
+    weight_base = torch.eye(2,dtype=torch.float32)
+    bias_base = torch.zeros(2,dtype=torch.float32)
+    weight_random = torch.tensor([[[0,value],[0,0]]],dtype=torch.float32)
+    bias_random = torch.tensor([[-0.5*value,0]],dtype=torch.float32)
+    return RandomAffineNet(weight_base,bias_base,weight_random,bias_random)
+def ShearY(value):
+    weight_base = torch.eye(2,dtype=torch.float32)
+    bias_base = torch.zeros(2,dtype=torch.float32)
+    weight_random = torch.tensor([[[0,0],[value,0]]],dtype=torch.float32)
+    bias_random = torch.tensor([[0,-0.5*value]],dtype=torch.float32)
+    return RandomAffineNet(weight_base,bias_base,weight_random,bias_random)
+    
+def TranslateX(value):
+    return TranslateXNet(value)
 
-def ShearX(img, v, fillcolor):  # [-0.3, 0.3]
-    if random.random() > 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, v, 0, 0, 1, 0),fillcolor = fillcolor)
+def TranslateY(value):
+    return TranslateYNet(value)
 
-
-def ShearY(img, v, fillcolor):  # [-0.3, 0.3]
-    if random.random() > 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, v, 1, 0), fillcolor = fillcolor)
-
-
-def TranslateX(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
-    if random.random() > 0.5:
-        v = -v
-    v = v * img.size[0]
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0), fillcolor = fillcolor)
-
-
-def TranslateXabs(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
-    if random.random() > 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0), fillcolor = fillcolor)
-
-
-def TranslateY(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
-    if random.random() > 0.5:
-        v = -v
-    v = v * img.size[1]
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v), fillcolor = fillcolor)
-
-
-def TranslateYabs(img, v, fillcolor):  # [-150, 150] => percentage: [-0.45, 0.45]
-    if random.random() > 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v), fillcolor = fillcolor)
-
-
-def Rotate(img, v, fillcolor):  # [-30, 30]
-    if random.random() > 0.5:
-        v = -v
-    return img.rotate(v, fillcolor = fillcolor)
+def Rotate(value):
+    return RandomRotateNet(value)
 
 
 def AutoContrast(img, _):
@@ -138,29 +118,31 @@ def SamplePairing(imgs):  # [0, 0.4]
     return f
 
 
-def Identity(img, v):
-    return img
-
+class Identity(nn.Module):
+    def __init__(self,value):
+        super(Identity,self).__init__()
+    def forward(self,x):
+        return x
 
 def augment_list(is_smallimage):  # 16 oeprations and their ranges
     if is_smallimage:
         #https://github.com/tensorflow/models/blob/master/research/autoaugment/augmentation_transforms.py
         l = [
-            (Identity, 0., 1.0),
-            (ShearX, 0., 0.3),  # 0
-            (ShearY, 0., 0.3),  # 1
-            (TranslateX, 0., 0.33),  # 2
-            (TranslateY, 0., 0.33),  # 3
-            (Rotate, 0, 30),  # 4
-            (AutoContrast, 0, 1),  # 5
+            (Identity, 0., 1.0,True),
+            (ShearX, 0., 0.3,True),  # 0
+            (ShearY, 0., 0.3,True),  # 1
+            (TranslateX, 0., 0.33,True),  # 2
+            (TranslateY, 0., 0.33,True),  # 3
+            (Rotate, 0, 30,True),  # 4
+            (AutoContrast, 0, 1,False),  # 5
             #(Invert, 0, 1),  # 6
-            (Equalize, 0, 1),  # 7
-            (Solarize, 0, 256),  # 8
-            (Posterize, 0, 4),  # 9
-            (Contrast, 0.1, 1.9),  # 10
-            (Color, 0.1, 1.9),  # 11
-            (Brightness, 0.1, 1.9),  # 12
-            (Sharpness, 0.1, 1.9),  # 13
+            (Equalize, 0, 1,False),  # 7
+            (Solarize, 0, 256,False),  # 8
+            (Posterize, 0, 4,False),  # 9
+            (Contrast, 0.1, 1.9,False),  # 10
+            (Color, 0.1, 1.9,False),  # 11
+            (Brightness, 0.1, 1.9,False),  # 12
+            (Sharpness, 0.1, 1.9,False),  # 13
             # (Cutout, 0, 0.2),  # 14
             # (SamplePairing(imgs), 0, 0.4),  # 15
         ]
@@ -242,12 +224,20 @@ class RandAugment:
 
     def __call__(self, img):
         ops = random.choices(self.augment_list, k=self.n)
-        for op, minval, maxval in ops:
+        ops_nonmatrix = []
+        ops_matrix = []
+        for op, minval, maxval,ismatrix in ops:
+            if ismatrix == False:
+                ops_nonmatrix.append((op,minval,maxval))
+            else:
+                ops_matrix.append(op((float(self.m)/10)*float(maxval-minval)+minval))
+        img_moved = transforms.ToPILImage()(PixelChangeAugment(nn.Sequential(*ops_matrix))(img))
+        for op,minval,maxval in ops_nonmatrix:
             val = (float(self.m) / 10) * float(maxval - minval) + minval
             if 'fillcolor' in inspect.getfullargspec(op)[0]:
               assert 'fillcolor' == inspect.getfullargspec(op)[0][-1]
-              img = op(img, val, self.fillcolor)
+              img_moved = op(img_moved, val, self.fillcolor)
             else:
-              img = op(img, val)
+              img_moved = op(img_moved, val)
 
-        return img
+        return transforms.ToTensor()(img_moved)
