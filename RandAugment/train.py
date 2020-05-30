@@ -21,7 +21,7 @@ from warmup_scheduler import GradualWarmupScheduler
 
 from RandAugment.common import add_filehandler
 from RandAugment.smooth_ce import SmoothCrossEntropyLoss
-
+import gc
 logger = get_logger('RandAugment')
 logger.setLevel(logging.INFO)
 
@@ -79,6 +79,10 @@ def run_epoch(model, loader, loss_fn, optimizer, desc_default='', epoch=0, write
     metrics /= cnt
     if optimizer:
         metrics.metrics['lr'] = optimizer.param_groups[0]['lr']
+        optimizer.zero_grad()
+    gc.collect()
+    torch.cuda.empty_cache()
+    gc.collect()
     if verbose:
         for key, value in metrics.items():
             writer.add_scalar(key, value, epoch)
