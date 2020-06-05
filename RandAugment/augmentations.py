@@ -137,12 +137,12 @@ def augment_list(is_smallimage):  # 16 oeprations and their ranges
             (AutoContrast, 0, 1,False),  # 5
             #(Invert, 0, 1),  # 6
             (Equalize, 0, 1,False),  # 7
-            (Solarize, 0, 256,False),  # 8
+            #(Solarize, 0, 256,False),  # 8
             (Posterize, 0, 4,False),  # 9
-            (Contrast, 0.1, 1.9,False),  # 10
-            (Color, 0.1, 1.9,False),  # 11
-            (Brightness, 0.1, 1.9,False),  # 12
-            (Sharpness, 0.1, 1.9,False),  # 13
+            (Contrast, 0.1, 1.0,False),  # 10
+            (Color, 0.1, 1.0,False),  # 11
+            (Brightness, 0.1, 1.0,False),  # 12
+            (Sharpness, 0.1, 1.0,False),  # 13
             # (Cutout, 0, 0.2),  # 14
             # (SamplePairing(imgs), 0, 0.4),  # 15
         ]
