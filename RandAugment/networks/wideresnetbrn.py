@@ -54,7 +54,7 @@ class BatchNormalization2D(Module):
 
 class BatchRenormalization2D(Module):
 
-    def __init__(self, num_features,  eps=1e-05, momentum=0.01, r_d_max_inc_step = 0.0001):
+    def __init__(self, num_features,  eps=1e-05, momentum=0.01, r_d_max_inc_step = 0.001):
         super(BatchRenormalization2D, self).__init__()
 
         self.eps = eps
@@ -72,8 +72,8 @@ class BatchRenormalization2D(Module):
         self.r_max_inc_step = r_d_max_inc_step
         self.d_max_inc_step = r_d_max_inc_step
 
-        self.r_max = torch.tensor( (1.0), requires_grad = False)
-        self.d_max = torch.tensor( (0.0), requires_grad = False)
+        self.register_buffer('r_max',torch.tensor((1.0)))
+        self.register_buffer('d_max',torch.tensor((0.0)))
 
     def forward(self, x):
 
@@ -99,12 +99,12 @@ class BatchRenormalization2D(Module):
             x = self.gamma * x + self.beta
 
             if self.r_max < self.max_r_max:
-                self.r_max += self.r_max_inc_step * x.shape[0]
+                self.r_max += self.r_max_inc_step
 
             if self.d_max < self.max_d_max:
-                self.d_max += self.d_max_inc_step * x.shape[0]
-            self.running_avg_mean += self.momentum * (batch_ch_mean.data.to(device) - self.running_avg_mean)
-            self.running_avg_std += self.momentum * (batch_ch_std.data.to(device) - self.running_avg_std)
+                self.d_max += self.d_max_inc_step
+            self.running_avg_mean += self.momentum * (batch_ch_mean.detach().to(device) - self.running_avg_mean)
+            self.running_avg_std += self.momentum * (batch_ch_std.detach().to(device) - self.running_avg_std)
 
         else:
             x = (x - self.running_avg_mean) / (self.running_avg_std + self.eps)
