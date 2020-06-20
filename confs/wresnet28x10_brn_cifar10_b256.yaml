@@ -3,12 +3,12 @@ model:
 dataset: cifar10
 aug: randaugment
 randaug:
-  N: 3
+  N: 6
   M: 5    # from appendix
 cutout: 16
 batch: 256
-epoch: 200
-lr: 0.01
+epoch: 1000
+lr: 0.003
 lr_schedule:
   type: 'cosine'
   warmup:
@@ -17,4 +17,4 @@ lr_schedule:
 optimizer:
   type: sgd
   nesterov: True
-  decay: 0.0005
+  decay: 0.00001

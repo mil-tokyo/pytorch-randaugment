@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 
-_bn_momentum = 0.1
+_bn_momentum = 0.01
 # Batch Renormalization for convolutional neural nets (2D) implementation based
 # on https://arxiv.org/abs/1702.03275
 
@@ -54,7 +54,7 @@ class BatchNormalization2D(Module):
 
 class BatchRenormalization2D(Module):
 
-    def __init__(self, num_features,  eps=1e-05, momentum=0.01, r_d_max_inc_step = 0.001):
+    def __init__(self, num_features,  eps=1e-05, momentum=0.01, r_d_max_inc_step = 0.0001):
         super(BatchRenormalization2D, self).__init__()
 
         self.eps = eps
@@ -80,7 +80,7 @@ class BatchRenormalization2D(Module):
         device = self.gamma.device
 
         batch_ch_mean = torch.mean(x, dim=(0,2,3), keepdim=True).to(device)
-        batch_ch_std = (torch.std(x, dim=(0,2,3), keepdim=True)+self.eps).to(device)
+        batch_ch_std = torch.sqrt(torch.var(x, dim=(0,2,3), keepdim=True)+self.eps).to(device)
 
         self.running_avg_std = self.running_avg_std.to(device)
         self.running_avg_mean = self.running_avg_mean.to(device)
@@ -107,7 +107,7 @@ class BatchRenormalization2D(Module):
             self.running_avg_std += self.momentum * (batch_ch_std.detach().to(device) - self.running_avg_std)
 
         else:
-            x = (x - self.running_avg_mean) / (self.running_avg_std + self.eps)
+            x = (x - self.running_avg_mean) / self.running_avg_std
             x = self.gamma * x + self.beta
 
         return x
