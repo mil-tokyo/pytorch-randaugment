@@ -54,11 +54,12 @@ class BatchNormalization2D(Module):
 
 class BatchRenormalization2D(Module):
 
-    def __init__(self, num_features,  eps=1e-05, momentum=0.01, r_d_max_inc_step = 0.0001):
+    def __init__(self, num_features,  eps=1e-05, momentum=0.01, keep_bn = 5000,r_max_inc_step = 0.0001,d_max_inc_step = 0.0001):
         super(BatchRenormalization2D, self).__init__()
 
         self.eps = eps
         self.momentum = torch.tensor( (momentum), requires_grad = False)
+        self.keep_bn = keep_bn
 
         self.gamma = torch.nn.Parameter(torch.ones((1, num_features, 1, 1)), requires_grad=True)
         self.beta = torch.nn.Parameter(torch.zeros((1, num_features, 1, 1)), requires_grad=True)
@@ -68,12 +69,10 @@ class BatchRenormalization2D(Module):
 
         self.max_r_max = 3.0
         self.max_d_max = 5.0
+        self.register_buffer('num_batches_tracked',torch.tensor(0, dtype=torch.long))
 
-        self.r_max_inc_step = r_d_max_inc_step
-        self.d_max_inc_step = r_d_max_inc_step
-
-        self.register_buffer('r_max',torch.tensor((1.0)))
-        self.register_buffer('d_max',torch.tensor((0.0)))
+        self.r_max_inc_step = r_max_inc_step
+        self.d_max_inc_step = d_max_inc_step
 
     def forward(self, x):
 
@@ -86,24 +85,21 @@ class BatchRenormalization2D(Module):
         self.running_avg_mean = self.running_avg_mean.to(device)
         self.momentum = self.momentum.to(device)
 
-        self.r_max = self.r_max.to(device)
-        self.d_max = self.d_max.to(device)
-
 
         if self.training:
 
-            r = torch.clamp(batch_ch_std / self.running_avg_std, 1.0 / self.r_max, self.r_max).to(device).detach().to(device)
-            d = torch.clamp((batch_ch_mean - self.running_avg_mean) / self.running_avg_std, -self.d_max, self.d_max).to(device).detach().to(device)
+            r_max = torch.clamp(1.0+self.r_max_inc_step * (self.num_batches_tracked - self.keep_bn),1.0,3.0).detach()
+            d_max = torch.clamp(self.d_max_inc_step * (self.num_batches_tracked - self.keep_bn),0.0,5.0).detach()
+            print(r_max)
+            print(d_max)
+            r = torch.clamp(batch_ch_std / self.running_avg_std, 1.0 / r_max, r_max).to(device).detach().to(device)
+            d = torch.clamp((batch_ch_mean - self.running_avg_mean) / self.running_avg_std, -d_max, d_max).to(device).detach().to(device)
 
             x = ((x - batch_ch_mean) * r )/ batch_ch_std + d
             x = self.gamma * x + self.beta
 
-            if self.r_max < self.max_r_max:
-                self.r_max += self.r_max_inc_step
-
-            if self.d_max < self.max_d_max:
-                self.d_max += self.d_max_inc_step
             self.running_avg_mean += self.momentum * (batch_ch_mean.detach().to(device) - self.running_avg_mean)
+            self.num_batches_tracked += 1
             self.running_avg_std += self.momentum * (batch_ch_std.detach().to(device) - self.running_avg_std)
 
         else:
@@ -128,12 +124,12 @@ def conv_init(m):
 
 
 class WideBasicBRN(nn.Module):
-    def __init__(self, in_planes, planes, dropout_rate, stride=1):
+    def __init__(self, in_planes, planes, dropout_rate, stride=1,keep_bn=0,r_max_inc_step=0,d_max_inc_step=0):
         super(WideBasicBRN, self).__init__()
-        self.bn1 = BatchRenormalization2D(in_planes, momentum=_bn_momentum)
+        self.bn1 = BatchRenormalization2D(in_planes, momentum=_bn_momentum,keep_bn = keep_bn,r_max_inc_step = r_max_inc_step,d_max_inc_step = d_max_inc_step)
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, padding=1, bias=True)
         self.dropout = nn.Dropout(p=dropout_rate)
-        self.bn2 = BatchRenormalization2D(planes, momentum=_bn_momentum)
+        self.bn2 = BatchRenormalization2D(planes, momentum=_bn_momentum,keep_bn = keep_bn,r_max_inc_step = r_max_inc_step,d_max_inc_step = d_max_inc_step)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=True)
 
         self.shortcut = nn.Sequential()
@@ -151,7 +147,7 @@ class WideBasicBRN(nn.Module):
 
 
 class WideResNetBRN(nn.Module):
-    def __init__(self, depth, widen_factor, dropout_rate, num_classes):
+    def __init__(self, depth, widen_factor, dropout_rate, num_classes,keep_bn = 5000,r_max_inc_step = 0.0001,d_max_inc_step = 0.0001):
         super(WideResNetBRN, self).__init__()
         self.in_planes = 16
 
@@ -162,20 +158,20 @@ class WideResNetBRN(nn.Module):
         nStages = [16, 16*k, 32*k, 64*k]
 
         self.conv1 = conv3x3(3, nStages[0])
-        self.layer1 = self._wide_layer(WideBasicBRN, nStages[1], n, dropout_rate, stride=1)
-        self.layer2 = self._wide_layer(WideBasicBRN, nStages[2], n, dropout_rate, stride=2)
-        self.layer3 = self._wide_layer(WideBasicBRN, nStages[3], n, dropout_rate, stride=2)
-        self.bn1 = BatchRenormalization2D(nStages[3], momentum=_bn_momentum)
+        self.layer1 = self._wide_layer(WideBasicBRN, nStages[1], n, dropout_rate, stride=1,keep_bn = keep_bn,r_max_inc_step = r_max_inc_step,d_max_inc_step = d_max_inc_step)
+        self.layer2 = self._wide_layer(WideBasicBRN, nStages[2], n, dropout_rate, stride=2,keep_bn = keep_bn,r_max_inc_step = r_max_inc_step,d_max_inc_step = d_max_inc_step)
+        self.layer3 = self._wide_layer(WideBasicBRN, nStages[3], n, dropout_rate, stride=2,keep_bn = keep_bn,r_max_inc_step = r_max_inc_step,d_max_inc_step = d_max_inc_step)
+        self.bn1 = BatchRenormalization2D(nStages[3], momentum=_bn_momentum,keep_bn=keep_bn,r_max_inc_step = r_max_inc_step,d_max_inc_step = d_max_inc_step)
         self.linear = nn.Linear(nStages[3], num_classes)
 
         # self.apply(conv_init)
 
-    def _wide_layer(self, block, planes, num_blocks, dropout_rate, stride):
+    def _wide_layer(self, block, planes, num_blocks, dropout_rate, stride,keep_bn,r_max_inc_step,d_max_inc_step):
         strides = [stride] + [1]*(num_blocks-1)
         layers = []
 
         for stride in strides:
-            layers.append(block(self.in_planes, planes, dropout_rate, stride))
+            layers.append(block(self.in_planes, planes, dropout_rate, stride,keep_bn = keep_bn,r_max_inc_step = r_max_inc_step,d_max_inc_step = d_max_inc_step))
             self.in_planes = planes
 
         return nn.Sequential(*layers)

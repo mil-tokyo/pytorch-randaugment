@@ -13,7 +13,7 @@ from RandAugment.networks.shakeshake.shake_resnext import ShakeResNeXt
 from RandAugment.networks.wideresnetbrn import WideResNetBRN
 
 
-def get_model(conf, num_class=10):
+def get_model(conf, num_class=10,total_epoch = None):
     name = conf['type']
 
     if name == 'resnet50':
@@ -25,7 +25,9 @@ def get_model(conf, num_class=10):
     elif name == 'wresnet28_10':
         model = WideResNet(28, 10, dropout_rate=0.0, num_classes=num_class)
     elif name == 'wresnet28_10_brn':
-        model = WideResNetBRN(28,10,dropout_rate=0.0,num_classes=num_class)
+        iter_per_epoch = 195
+        whole_iter = iter_per_epoch * total_epoch
+        model = WideResNetBRN(28,10,dropout_rate=0.0,num_classes=num_class,keep_bn = whole_iter*5.0/140.0,r_max_inc_step = 2.0/(whole_iter*35.0/140.0),d_max_inc_step = 5.0/(whole_iter*20.0/140.0))
 
     elif name == 'shakeshake26_2x32d':
         model = ShakeResNet(26, 32, num_class)

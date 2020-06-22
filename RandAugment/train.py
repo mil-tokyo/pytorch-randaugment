@@ -97,7 +97,7 @@ def train_and_eval(tag, dataroot, test_ratio=0.0, cv_fold=0, reporter=None, metr
     trainsampler, trainloader, validloader, testloader_ = get_dataloaders(C.get()['dataset'], C.get()['batch'], dataroot, test_ratio, split_idx=cv_fold)
 
     # create a model & an optimizer
-    model = get_model(C.get()['model'], num_class(C.get()['dataset']))
+    model = get_model(C.get()['model'], num_class(C.get()['dataset']),total_epoch = C.get()['epoch'])
 
     lb_smooth = C.get()['optimizer'].get('label_smoothing', 0.0)
     if lb_smooth > 0.0:
